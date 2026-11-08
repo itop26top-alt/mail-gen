@@ -11,7 +11,7 @@ import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
 
-const val SLOT_COUNT = 4
+const val SLOT_COUNT = 50
 
 enum class SlotStatus { EMPTY, WORKING, READY, ERROR }
 
@@ -31,7 +31,7 @@ data class UiState(
 )
 
 /**
- * Owns the four independent slots. Generating into a slot always destroys that
+ * Owns the fifty independent slots. Generating into a slot always destroys that
  * slot's previous mailbox first, so the provider's one-mailbox-per-account
  * ceiling never blocks a regeneration.
  */
@@ -156,7 +156,7 @@ class MailViewModel(context: Context) : ViewModel() {
                 st.copy(slots = (0 until SLOT_COUNT).map { Slot(it) })
             }
             persist()
-            toast("All 4 mailboxes deleted")
+            toast("All 50 mailboxes deleted")
         }
     }
 
