@@ -54,7 +54,7 @@ fun MailGenApp(vm: MailViewModel) {
                             style = MaterialTheme.typography.headlineSmall,
                         )
                         Text(
-                            "4 parallel temp mailboxes · auto-rotate",
+                            "50 parallel temp mailboxes · auto-rotate",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -230,7 +230,7 @@ private fun SlotCard(
 
         if (slot.messages.isNotEmpty()) {
             Spacer(Modifier.height(10.dp))
-            Divider(color = MaterialTheme.colorScheme.outline)
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline)
             slot.messages.forEach { m ->
                 Column(
                     Modifier
