@@ -1,4 +1,4 @@
-package com.vastobb/mailgen
+package com.vastobb.mailgen
 
 import retrofit2.http.GET
 import retrofit2.http.Path
