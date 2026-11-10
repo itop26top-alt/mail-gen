@@ -31,14 +31,8 @@ class MailViewModel : ViewModel() {
         }
     }
 
-    fun selectMail(mailId: String) {
-        viewModelScope.launch {
-            try {
-                // Fetch detailed mail message with body and attachments
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
+    fun selectMail(mail: MailMessage) {
+        _selectedMail.value = mail
     }
 
     fun clearSelection() {
