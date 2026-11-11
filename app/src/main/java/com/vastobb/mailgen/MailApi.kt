@@ -10,41 +10,9 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
-data class MailAttachment(
-    val id: String,
-    val filename: String,
-    val contentType: String,
-    val size: Int,
-    val downloadUrl: String
-)
-
-data class Account(
-    val id: String,
-    val address: String,
-    val password: String,
-    val token: String,
-)
-
-data class MessageSummary(
-    val id: String,
-    val subject: String,
-    val from: String,
-    val intro: String,
-    val seen: Boolean,
-    val createdAt: String,
-)
-
-data class MessageDetail(
-    val id: String,
-    val subject: String,
-    val from: String,
-    val text: String,
-    val html: String,
-    val createdAt: String,
-    val cc: List<String> = emptyList(),
-    val attachments: List<MailAttachment> = emptyList()
-)
-
+/**
+ * mail.tm client. Extended to fully support attachments, inline images, HTML and plain text.
+ */
 object MailApi {
     private const val BASE = "https://api.mail.tm"
     private const val UA = "mail-gen/1.0"
@@ -183,8 +151,20 @@ object MailApi {
             }
         }
 
-        val htmlText = m.optJSONArray("html")?.optString(0) ?: m.optString("html").orEmpty()
-        val plainText = m.optJSONArray("text")?.optString(0) ?: m.optString("text").orEmpty()
+        // Поддержка как массивов, так и обычных строк для html/text
+        val htmlRaw = m.opt("html")
+        val htmlText = when (htmlRaw) {
+            is JSONArray -> htmlRaw.optString(0)
+            is String -> htmlRaw
+            else -> ""
+        }
+
+        val textRaw = m.opt("text")
+        val plainText = when (textRaw) {
+            is JSONArray -> textRaw.optString(0)
+            is String -> textRaw
+            else -> ""
+        }
 
         MessageDetail(
             id = m.optString("id"),
@@ -208,3 +188,38 @@ object MailApi {
         code == 200
     }
 }
+
+data class Account(
+    val id: String,
+    val address: String,
+    val password: String,
+    val token: String,
+)
+
+data class MessageSummary(
+    val id: String,
+    val subject: String,
+    val from: String,
+    val intro: String,
+    val seen: Boolean,
+    val createdAt: String,
+)
+
+data class MailAttachment(
+    val id: String,
+    val filename: String,
+    val contentType: String,
+    val size: Int,
+    val downloadUrl: String
+)
+
+data class MessageDetail(
+    val id: String,
+    val subject: String,
+    val from: String,
+    val text: String,
+    val html: String,
+    val createdAt: String,
+    val cc: List<String> = emptyList(),
+    val attachments: List<MailAttachment> = emptyList()
+)
