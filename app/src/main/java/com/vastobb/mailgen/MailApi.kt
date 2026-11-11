@@ -123,7 +123,7 @@ object MailApi {
         if (code != 200) throw ApiException("read failed: $code")
         val m = JSONObject(raw)
 
-        // Парсинг вложений (фото, файлы), чтобы они полноценно подтягивались
+        // Парсинг вложений (фото, файлы)
         val attachmentsArr = m.optJSONArray("attachments")
         val attachmentsList = mutableListOf<AttachmentInfo>()
         if (attachmentsArr != null) {
@@ -141,14 +141,14 @@ object MailApi {
             }
         }
 
-        // Формируем красивое текстовое представление с перечислением вложений, если они есть
+        // Формируем текстовое представление с перечислением вложений
         var plainText = m.optJSONArray("text")?.optString(0) ?: m.optString("text").ifBlank { m.optString("intro") }
         if (attachmentsList.isNotEmpty()) {
             val attNames = attachmentsList.joinToString(", ") { it.filename }
             plainText += "\n\n[Прикрепленные файлы: $attNames]"
         }
 
-        // Обработка HTML-тела письма (включая отображение картинок по ссылкам)
+        // Обработка HTML-тела письма
         var htmlContent = m.optJSONArray("html")?.optString(0) ?: m.optString("html").orEmpty()
         if (htmlContent.isBlank() && plainText.isNotBlank()) {
             htmlContent = "<p>${plainText.replace("\n", "<br>")}</p>"
@@ -201,7 +201,6 @@ data class AttachmentInfo(
 
 data class MessageDetail(
     val id: String,
-    val subject: name, // сохраняет полную совместимость с оригиналом
     val subject: String,
     val from: String,
     val text: String,
