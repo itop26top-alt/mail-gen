@@ -123,28 +123,21 @@ object MailApi {
         if (code != 200) throw ApiException("read failed: $code")
         val m = JSONObject(raw)
 
-        // Парсинг вложений (фото, файлы)
+        // Парсинг вложений (фото, файлы) для отображения в тексте письма
         val attachmentsArr = m.optJSONArray("attachments")
-        val attachmentsList = mutableListOf<AttachmentInfo>()
+        val attachmentsList = mutableListOf<String>()
         if (attachmentsArr != null) {
             for (i in 0 until attachmentsArr.length()) {
                 val att = attachmentsArr.optJSONObject(i) ?: continue
-                attachmentsList.add(
-                    AttachmentInfo(
-                        id = att.optString("id"),
-                        filename = att.optString("filename").ifBlank { "file_$i" },
-                        contentType = att.optString("contentType").orEmpty(),
-                        size = att.optInt("size", 0),
-                        downloadUrl = att.optString("downloadUrl").let { if (it.startsWith("http")) it else "$BASE$it" }
-                    )
-                )
+                val filename = att.optString("filename").ifBlank { "file_$i" }
+                attachmentsList.add(filename)
             }
         }
 
-        // Формируем текстовое представление с перечислением вложений
+        // Формируем текстовое представление с перечислением прикрепленных файлов
         var plainText = m.optJSONArray("text")?.optString(0) ?: m.optString("text").ifBlank { m.optString("intro") }
         if (attachmentsList.isNotEmpty()) {
-            val attNames = attachmentsList.joinToString(", ") { it.filename }
+            val attNames = attachmentsList.joinToString(", ")
             plainText += "\n\n[Прикрепленные файлы: $attNames]"
         }
 
@@ -189,14 +182,6 @@ data class MessageSummary(
     val intro: String,
     val seen: Boolean,
     val createdAt: String,
-)
-
-data class AttachmentInfo(
-    val id: String,
-    val filename: String,
-    val contentType: String,
-    val size: Int,
-    val downloadUrl: String
 )
 
 data class MessageDetail(
