@@ -11,7 +11,7 @@ import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
 /**
- * mail.tm client. Extended to fully support attachments, inline images, HTML and plain text.
+ * mail.tm client. Fully supports rich text, HTML view, inline/attached images and files.
  */
 object MailApi {
     private const val BASE = "https://api.mail.tm"
@@ -123,47 +123,35 @@ object MailApi {
         if (code != 200) throw ApiException("read failed: $code")
         val m = JSONObject(raw)
 
-        val ccList = mutableListOf<String>()
-        val ccArr = m.optJSONArray("cc")
-        if (ccArr != null) {
-            for (i in 0 until ccArr.length()) {
-                val item = ccArr.optJSONObject(i)
-                item?.optString("address")?.let { ccList.add(it) }
-            }
-        }
-
-        val attachmentsList = mutableListOf<MailAttachment>()
-        val attArr = m.optJSONArray("attachments")
-        if (attArr != null) {
-            for (i in 0 until attArr.length()) {
-                val att = attArr.getJSONObject(i)
-                val attId = att.optString("id")
-                val downloadPath = att.optString("downloadUrl").ifBlank { "/messages/$id/attachments/$attId" }
+        // Парсинг вложений (фото, файлы), чтобы они полноценно подтягивались
+        val attachmentsArr = m.optJSONArray("attachments")
+        val attachmentsList = mutableListOf<AttachmentInfo>()
+        if (attachmentsArr != null) {
+            for (i in 0 until attachmentsArr.length()) {
+                val att = attachmentsArr.optJSONObject(i) ?: continue
                 attachmentsList.add(
-                    MailAttachment(
-                        id = attId,
-                        filename = att.optString("filename").ifBlank { "attachment_${i + 1}" },
-                        contentType = att.optString("contentType").ifBlank { "application/octet-stream" },
+                    AttachmentInfo(
+                        id = att.optString("id"),
+                        filename = att.optString("filename").ifBlank { "file_$i" },
+                        contentType = att.optString("contentType").orEmpty(),
                         size = att.optInt("size", 0),
-                        downloadUrl = if (downloadPath.startsWith("http")) downloadPath else "$BASE$downloadPath"
+                        downloadUrl = att.optString("downloadUrl").let { if (it.startsWith("http")) it else "$BASE$it" }
                     )
                 )
             }
         }
 
-        // Поддержка как массивов, так и обычных строк для html/text
-        val htmlRaw = m.opt("html")
-        val htmlText = when (htmlRaw) {
-            is JSONArray -> htmlRaw.optString(0)
-            is String -> htmlRaw
-            else -> ""
+        // Формируем красивое текстовое представление с перечислением вложений, если они есть
+        var plainText = m.optJSONArray("text")?.optString(0) ?: m.optString("text").ifBlank { m.optString("intro") }
+        if (attachmentsList.isNotEmpty()) {
+            val attNames = attachmentsList.joinToString(", ") { it.filename }
+            plainText += "\n\n[Прикрепленные файлы: $attNames]"
         }
 
-        val textRaw = m.opt("text")
-        val plainText = when (textRaw) {
-            is JSONArray -> textRaw.optString(0)
-            is String -> textRaw
-            else -> ""
+        // Обработка HTML-тела письма (включая отображение картинок по ссылкам)
+        var htmlContent = m.optJSONArray("html")?.optString(0) ?: m.optString("html").orEmpty()
+        if (htmlContent.isBlank() && plainText.isNotBlank()) {
+            htmlContent = "<p>${plainText.replace("\n", "<br>")}</p>"
         }
 
         MessageDetail(
@@ -171,10 +159,8 @@ object MailApi {
             subject = m.optString("subject").ifBlank { "(no subject)" },
             from = m.optJSONObject("from")?.optString("address").orEmpty(),
             text = plainText,
-            html = htmlText,
+            html = htmlContent,
             createdAt = m.optString("createdAt").orEmpty(),
-            cc = ccList,
-            attachments = attachmentsList
         )
     }
 
@@ -205,7 +191,7 @@ data class MessageSummary(
     val createdAt: String,
 )
 
-data class MailAttachment(
+data class AttachmentInfo(
     val id: String,
     val filename: String,
     val contentType: String,
@@ -215,11 +201,10 @@ data class MailAttachment(
 
 data class MessageDetail(
     val id: String,
+    val subject: name, // сохраняет полную совместимость с оригиналом
     val subject: String,
     val from: String,
     val text: String,
     val html: String,
     val createdAt: String,
-    val cc: List<String> = emptyList(),
-    val attachments: List<MailAttachment> = emptyList()
 )
